@@ -5,7 +5,12 @@ from decimal import Decimal, InvalidOperation, localcontext
 import pytest
 
 from app.exceptions import CalculatorError
-from app.input_validators import parse_number, validate_operand
+from app.input_validators import (
+    parse_number,
+    validate_integer,
+    validate_nonzero,
+    validate_operand,
+)
 
 
 @pytest.mark.parametrize(
@@ -42,6 +47,29 @@ def test_nonfinite_numbers(text):
 
 def test_valid_operand_requires_no_conversion():
     assert validate_operand(Decimal("1.20")) is None
+
+
+@pytest.mark.parametrize("value", ["0", "-0", "0.00", "-0E+5"])
+def test_nonzero_validator_rejects_all_zero_representations(value):
+    with pytest.raises(CalculatorError, match="Cannot divide by zero"):
+        validate_nonzero(Decimal(value))
+
+
+def test_nonzero_validator_accepts_nonzero_values_and_customizes_errors():
+    assert validate_nonzero(Decimal("-0.001")) is None
+    with pytest.raises(CalculatorError, match="Root degree cannot be zero"):
+        validate_nonzero(Decimal(0), "Root degree cannot be zero.")
+
+
+@pytest.mark.parametrize("value", ["0", "-3", "3.000", "3E2"])
+def test_integer_validator_accepts_exact_integer_values(value):
+    assert validate_integer(Decimal(value), "An integer is required.") is None
+
+
+@pytest.mark.parametrize("value", ["1.5", "-2.5"])
+def test_integer_validator_rejects_fractional_values(value):
+    with pytest.raises(CalculatorError, match="An integer is required"):
+        validate_integer(Decimal(value), "An integer is required.")
 
 
 def test_parsing_does_not_depend_on_or_change_caller_context():

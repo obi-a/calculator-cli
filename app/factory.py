@@ -4,10 +4,16 @@ from typing import ClassVar
 
 from app.exceptions import CalculatorError
 from app.operations import (
+    AbsDiffOperation,
     AddOperation,
     DivideOperation,
+    IntDivideOperation,
+    ModulusOperation,
     MultiplyOperation,
     Operation,
+    PercentOperation,
+    PowerOperation,
+    RootOperation,
     SubtractOperation,
 )
 
@@ -20,6 +26,12 @@ class OperationFactory:
         "subtract": SubtractOperation,
         "multiply": MultiplyOperation,
         "divide": DivideOperation,
+        "power": PowerOperation,
+        "root": RootOperation,
+        "modulus": ModulusOperation,
+        "int_divide": IntDivideOperation,
+        "percent": PercentOperation,
+        "abs_diff": AbsDiffOperation,
     }
 
     @classmethod

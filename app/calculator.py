@@ -57,4 +57,6 @@ class Calculator:
         print("  help                  Show this help")
         print("  exit / quit           Exit the calculator")
         print("Examples: add 0.1 0.2; divide 7 2; multiply -2 1e3")
+        print("More examples: power 2 -3; root -8 3; percent 25 200")
+        print("Root degree: a nonzero integer; negative numbers require odd degrees.")
         print("Precision: 28 significant digits, round-half-even.")

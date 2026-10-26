@@ -13,6 +13,20 @@ def validate_operand(value: Decimal) -> None:
         raise CalculatorError("Operands must be finite decimal numbers.")
 
 
+def validate_nonzero(
+    value: Decimal, message: str = "Cannot divide by zero."
+) -> None:
+    """Require an already validated operand to be nonzero, including signed zero."""
+    if value.is_zero():
+        raise CalculatorError(message)
+
+
+def validate_integer(value: Decimal, message: str) -> None:
+    """Require a finite operand to be integral without rounding or float conversion."""
+    if value != value.to_integral_value():
+        raise CalculatorError(message)
+
+
 def parse_number(text: str) -> Decimal:
     """Parse numerical text without introducing binary floating-point error."""
     try:

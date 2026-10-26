@@ -1,1 +1,1 @@
-"""Enhanced Calculator: a command-line application with four operations."""
+"""Enhanced Calculator CLI application."""

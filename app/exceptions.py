@@ -3,3 +3,7 @@
 
 class CalculatorError(ValueError):
     """An invalid calculator request or an unsupported arithmetic result."""
+
+
+class ConfigurationError(CalculatorError):
+    """Startup settings prevent the application from logging to its file."""

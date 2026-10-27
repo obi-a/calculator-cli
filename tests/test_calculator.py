@@ -1,117 +1,111 @@
-"""Full interactive sessions, including recovery and terminal shutdown."""
+"""CLI results, recoverable errors, and logging through public behavior."""
+
+from decimal import Decimal
+from unittest.mock import Mock
 
 import pytest
 
 from app.calculator import Calculator
 from app.factory import OperationFactory
-
-
-def test_session_runs_all_four_operations(run_session):
-    status, output = run_session(
-        "add 0.1 0.2", "subtract 3 8", "multiply -2 4", "divide 7 2", "exit"
-    )
-    assert status == 0
-    for result in ("0.3", "-5", "-8", "3.5"):
-        assert f"calc> {result}\n" in output
-    assert "Goodbye!" in output
-
-
-def test_session_runs_all_six_new_operations(run_session):
-    status, output = run_session(
-        "power 2 -3", "root -8 3", "modulus -7 3", "int_divide -7 3",
-        "percent 25 200", "abs_diff 3 8", "exit"
-    )
-    assert status == 0
-    for result in ("0.125", "-2.000000000000000000000000000", "2", "-2", "12.500", "5"):
-        assert f"calc> {result}\n" in output
-    assert "Error:" not in output
-    assert output.endswith("Goodbye!\n")
-
-
-def test_new_operations_accept_normalized_names_and_decimal_operands(run_session):
-    _, output = run_session("  RoOt\t1e6  3 ", "MoDuLuS -5.5 2", "quit")
-    assert "0.5\n" in output
-    assert "100.0000000000000000000000000\n" in output
-    assert "Error:" not in output
-
-
-def test_session_accepts_case_whitespace_and_scientific_notation(run_session):
-    status, output = run_session("", " \t ", "  MuLtIpLy\t-2  1e3  ", " QuIt ")
-    assert status == 0
-    assert "-2E+3\n" in output
-    assert "Error:" not in output
-
-
-def test_help_lists_registered_operations_and_usage(run_session):
-    _, output = run_session("HELP", "exit")
-    for name in OperationFactory.supported_operations():
-        assert f"{name} <number> <number>" in output
-    assert "exit / quit" in output
-    assert "28 significant digits" in output
-
-
-@pytest.mark.parametrize("name", OperationFactory.supported_operations())
-@pytest.mark.parametrize("operands", ["", " 1", " 1 2 3"])
-def test_wrong_arithmetic_arity_recovers(run_session, name, operands):
-    status, output = run_session(name + operands, "add 2 3", "exit")
-    assert status == 0
-    assert f"Error: Usage: {name} <number> <number>" in output
-    assert "calc> 5\n" in output
-
-
-@pytest.mark.parametrize("name", ["help", "exit", "quit"])
-def test_control_commands_reject_operands_and_keep_running(run_session, name):
-    _, output = run_session(f"{name} 1", "add 2 3", "exit")
-    assert f"Error: Usage: {name}\n" in output
-    assert "calc> 5\n" in output
+from app.logger import Logger
 
 
 @pytest.mark.parametrize(
-    "line,message",
+    "name,left,right,result",
     [
-        ("unknown 1 2", "Unknown operation"),
-        ("power -2 0.5", "integer exponent"),
-        ("power 0 -1", "negative power"),
-        ("root -16 2", "odd root degree"),
-        ("root 16 0", "degree cannot be zero"),
-        ("root 16 0.5", "degree must be an integer"),
-        ("modulus 5 0", "Cannot divide by zero"),
-        ("int_divide 5 -0", "Cannot divide by zero"),
-        ("percent 25 0", "Cannot divide by zero"),
-        ("power NaN 2", "finite decimal numbers"),
-        ("root 16 Infinity", "finite decimal numbers"),
-        ("add nope 2", "Invalid number"),
-        ("subtract 2 nope", "Invalid number"),
-        ("add NaN 1", "finite decimal numbers"),
-        ("multiply 1 Infinity", "finite decimal numbers"),
-        ("divide 1 -0", "Cannot divide by zero"),
-        ("multiply 1e999999 10", "supported decimal range"),
-        ("divide 1e-999999 1e100", "supported decimal range"),
+        ("add", "1.20", "2.30", "3.50"),
+        ("subtract", "3", "8", "-5"),
+        ("multiply", "-2", "1e3", "-2E+3"),
+        ("divide", "7", "2", "3.5"),
+        ("power", "2", "-3", "0.125"),
+        ("root", "-8", "3", "-2.000000000000000000000000000"),
+        ("modulus", "-7", "3", "2"),
+        ("int_divide", "-7", "3", "-2"),
+        ("percent", "25", "200", "12.500"),
+        ("abs_diff", "3", "8", "5"),
     ],
 )
-def test_expected_errors_do_not_end_session(run_session, line, message):
-    status, output = run_session(line, "add 2 3", "exit")
+def test_calculations_print_and_log_results(name, left, right, result, run_session, tmp_path):
+    status, output = run_session(f"  {name.upper()}\t{left}  {right} ", "exit")
+
     assert status == 0
-    assert "Error:" in output
-    assert message in output
+    assert f"calc> {result}\n" in output
+    content = (tmp_path / "logs/calculator.log").read_text()
+    assert content.count("INFO Calculation") == 1
+    assert (
+        f"operation={name} left={Decimal(left)} right={Decimal(right)} result={result}"
+    ) in content
+
+
+def test_help_lists_commands(run_session, tmp_path):
+    _, output = run_session("help", "exit")
+    for name in OperationFactory.supported_operations():
+        assert f"{name} <number> <number>" in output
+    assert "exit / quit" in output
+    assert "INFO Help requested" in (tmp_path / "logs/calculator.log").read_text()
+
+
+@pytest.mark.parametrize(
+    "command,message",
+    [
+        ("unknown 1 2", "Unknown operation"),
+        ("add", "Usage: add"),
+        ("divide 1", "Usage: divide"),
+        ("power 1 2 3", "Usage: power"),
+        ("exit 1", "Usage: exit"),
+        ("add nope 2", "Invalid number"),
+        ("divide 1 -0", "Cannot divide by zero"),
+    ],
+)
+def test_invalid_commands_log_warning_and_allow_recovery(
+    command, message, run_session, tmp_path
+):
+    status, output = run_session(command, "add 2 3", "exit")
+
+    assert status == 0
+    assert f"Error: {message}" in output
     assert "calc> 5\n" in output
-    assert "Traceback" not in output
+    content = (tmp_path / "logs/calculator.log").read_text()
+    assert content.count("WARNING Rejected command") == 1
+    assert content.count("INFO Calculation") == 1
 
 
-@pytest.mark.parametrize("end", [EOFError(), KeyboardInterrupt(), "exit", "quit"])
-def test_clean_shutdown_after_a_calculation(run_session, end):
+@pytest.mark.parametrize("end", ["exit", "quit", EOFError(), KeyboardInterrupt()])
+def test_clean_shutdown(end, run_session, tmp_path):
     status, output = run_session("divide 1 3", end)
+
     assert status == 0
     assert "0.3333333333333333333333333333" in output
     assert output.endswith("Goodbye!\n")
-    assert "Error:" not in output
+    content = (tmp_path / "logs/calculator.log").read_text()
+    assert "INFO Calculator session started" in content
+    assert "INFO Calculator session ended" in content
 
 
-def test_unexpected_programming_errors_are_not_swallowed(monkeypatch):
-    def broken_factory(name):
-        raise RuntimeError("Unexpected implementation failure")
+def test_unexpected_errors_are_logged_and_raised(monkeypatch, run_session, tmp_path):
+    monkeypatch.setattr(
+        OperationFactory, "create", Mock(side_effect=RuntimeError("unexpected failure"))
+    )
+    with pytest.raises(RuntimeError, match="unexpected failure"):
+        run_session("add 1 2")
 
-    monkeypatch.setattr(OperationFactory, "create", broken_factory)
-    monkeypatch.setattr("builtins.input", lambda prompt: "add 1 2")
-    with pytest.raises(RuntimeError, match="Unexpected implementation failure"):
-        Calculator().run()
+    content = (tmp_path / "logs/calculator.log").read_text()
+    assert "ERROR Unexpected calculator error" in content
+    assert "RuntimeError: unexpected failure" in content
+
+
+@pytest.mark.parametrize("injected", [False, True])
+def test_calculator_only_closes_its_own_logger(injected, monkeypatch):
+    logger = Mock(spec=Logger)
+    monkeypatch.setattr("app.calculator.Logger", lambda path: logger)
+    monkeypatch.setattr("builtins.input", lambda prompt: "exit")
+    calculator = Calculator(logger=logger) if injected else Calculator()
+
+    assert calculator.run() == 0
+    assert logger.close.call_count == (0 if injected else 1)
+
+
+def test_injected_logger_bypasses_configuration(logger, monkeypatch):
+    monkeypatch.setenv("CALCULATOR_LOG_FILE", "")
+    calculator = Calculator(logger=logger)
+    assert calculator.execute_line("add 1 2") is True

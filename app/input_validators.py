@@ -6,7 +6,10 @@ from app.exceptions import CalculatorError
 
 
 def validate_operand(value: Decimal, max_value: Decimal | None = None) -> None:
-    """Require a finite Decimal, avoiding implicit conversion from floats."""
+    """Require a finite Decimal, avoiding implicit conversion from floats.
+
+    When supplied, max_value bounds the operand's absolute value inclusively.
+    """
     if not isinstance(value, Decimal):
         raise CalculatorError("Operands must be Decimal numbers.")
     if not value.is_finite():
@@ -30,7 +33,10 @@ def validate_integer(value: Decimal, message: str) -> None:
 
 
 def parse_number(text: str, max_value: Decimal | None = None) -> Decimal:
-    """Parse numerical text without introducing binary floating-point error."""
+    """Parse numerical text without introducing binary floating-point error.
+
+    Apply the optional magnitude limit after parsing and finite-value validation.
+    """
     try:
         # A separate context also keeps invalid input from setting caller flags.
         value = Decimal(text, context=Context(traps=[InvalidOperation]))

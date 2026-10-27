@@ -66,6 +66,7 @@ class ObserverRegistry(Generic[EventT]):
                 return
 
     def notify(self, event: EventT) -> None:
+        """Isolate callback errors; subscription changes apply to the next event."""
         for observer in tuple(self._observers):
             try:
                 observer.update(event)

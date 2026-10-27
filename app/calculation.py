@@ -31,9 +31,14 @@ class Calculation:
         return self.operation.execute(self.left, self.right)
 
     def complete(self, decimal_places: int = 28) -> "Calculation":
-        """Execute once and capture a rounded result and UTC timestamp."""
+        """Execute once, limit fractional digits, and capture a UTC timestamp.
+
+        This final rounding uses the operation's existing 28-significant-digit
+        result. Values within the limit retain their Decimal representation.
+        """
         result = self.execute()
         if result.as_tuple().exponent < -decimal_places:
+            # Leave room for the integer part and a carry when rounding.
             context = Context(
                 prec=max(28, result.adjusted() + decimal_places + 2),
                 rounding=ROUND_HALF_EVEN,

@@ -22,7 +22,7 @@ class _FileHandler(logging.FileHandler):
 class Logger:
     """A small logging facade whose handler belongs only to this instance."""
 
-    def __init__(self, log_file: Path) -> None:
+    def __init__(self, log_file: Path, *, encoding: str = "utf-8") -> None:
         # Separate instances can share a destination without duplicating records
         # or closing each other's handlers. Never configure the root logger.
         self._logger = logging.getLogger(f"calculator.{id(self)}")
@@ -30,8 +30,8 @@ class Logger:
         self._logger.propagate = False
         try:
             log_file.parent.mkdir(parents=True, exist_ok=True)
-            handler = _FileHandler(log_file, mode="a", encoding="utf-8")
-        except (OSError, ValueError) as error:
+            handler = _FileHandler(log_file, mode="a", encoding=encoding)
+        except (OSError, ValueError, LookupError) as error:
             raise ConfigurationError(
                 f"Cannot open log file {str(log_file)!r}: {error}"
             ) from error

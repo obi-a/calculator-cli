@@ -4,6 +4,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field, replace
 from datetime import datetime, timezone
 from decimal import ROUND_HALF_EVEN, Context, Decimal, localcontext
+import json
 
 from app.exceptions import CalculatorError
 from app.factory import OperationFactory
@@ -53,8 +54,7 @@ class Calculation:
             raise CalculatorError("Only completed calculations can be recorded.")
         return {
             "operation": self.operation_name,
-            "left": str(self.left),
-            "right": str(self.right),
+            "operands": json.dumps([str(self.left), str(self.right)]),
             "result": str(self.result),
             "timestamp": self.timestamp.isoformat(),
         }
@@ -62,13 +62,22 @@ class Calculation:
     @classmethod
     def from_record(cls, record: Mapping[str, str]) -> "Calculation":
         """Restore saved values without applying today's limits or re-executing."""
+        operands = json.loads(record["operands"])
+        if (
+            not isinstance(operands, list)
+            or len(operands) != 2
+            or not all(isinstance(value, str) for value in operands)
+        ):
+            raise CalculatorError(
+                "History operands must be a JSON array of two numeric strings."
+            )
         timestamp = datetime.fromisoformat(record["timestamp"])
         if timestamp.tzinfo is None or timestamp.utcoffset() is None:
             raise CalculatorError("History timestamps must include a timezone.")
         return cls(
             OperationFactory.create(record["operation"]),
-            parse_number(record["left"]),
-            parse_number(record["right"]),
+            parse_number(operands[0]),
+            parse_number(operands[1]),
             result=parse_number(record["result"]),
             timestamp=timestamp,
         )

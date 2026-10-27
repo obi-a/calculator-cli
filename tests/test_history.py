@@ -44,7 +44,7 @@ def test_csv_round_trip(count, encoding, entry, config):
     history.save()
 
     assert config.history_file.read_text(encoding=encoding).splitlines()[0] == (
-        "operation,left,right,result,timestamp"
+        "operation,operands,result,timestamp"
     )
     restored = CalculationHistory(
         replace(config, precision=0, max_input_value=Decimal(1))
@@ -60,9 +60,9 @@ def test_csv_round_trip(count, encoding, entry, config):
     [
         None,
         "",
-        "wrong,columns\n",
-        "operation,left,right,result,timestamp\n"
-        "add,1,2,3,2026-01-01T00:00:00+00:00,extra\n",
+        "operation,left,right,result,timestamp\n",
+        "operation,operands,result,timestamp\n"
+        'add,"[""1"", ""2""]",3,2026-01-01T00:00:00+00:00,extra\n',
     ],
     ids=["missing", "empty-file", "wrong-columns", "extra-field"],
 )
@@ -81,7 +81,11 @@ def test_invalid_csv_keeps_existing_history(contents, entry, config):
     "field,value",
     [
         ("operation", "unknown"),
-        ("left", "not-a-number"),
+        ("operands", "not-json"),
+        ("operands", '{"left": "1", "right": "2"}'),
+        ("operands", '["1"]'),
+        ("operands", '["1", 2]'),
+        ("operands", '["not-a-number", "2"]'),
         ("result", "Infinity"),
         ("timestamp", "not-a-timestamp"),
         ("timestamp", "2026-01-01T00:00:00"),
@@ -90,7 +94,7 @@ def test_invalid_csv_keeps_existing_history(contents, entry, config):
 def test_invalid_rows_are_rejected_together(field, value, entry, config):
     history = CalculationHistory(config)
     history.add(entry)
-    valid = dict(entry.to_record(), left="1", right="2", result="3")
+    valid = dict(entry.to_record(), operands='["1", "2"]', result="3")
     invalid = dict(entry.to_record(), **{field: value})
     pd.DataFrame([valid, invalid]).to_csv(config.history_file, index=False)
 

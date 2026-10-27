@@ -12,7 +12,7 @@ from app.calculation import Calculation
 from app.calculator_config import CalculatorConfig
 from app.exceptions import HistoryError
 
-COLUMNS = ("operation", "left", "right", "result", "timestamp")
+COLUMNS = ("operation", "operands", "result", "timestamp")
 
 
 class CalculationHistory:

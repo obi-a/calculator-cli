@@ -1,5 +1,7 @@
 """Executable startup, exit status, and safe imports."""
 
+import csv
+import json
 from pathlib import Path
 import runpy
 
@@ -52,6 +54,8 @@ def test_entry_point_applies_encoding_to_logs_and_auto_save(monkeypatch, tmp_pat
 
     log = (tmp_path / "logs/calculator.log").read_text(encoding="utf-16")
     assert "INFO Calculation operation=add left=1.20 right=2.30 result=3.50" in log
-    csv = (tmp_path / "archive/history.csv").read_text(encoding="utf-16")
-    assert csv.startswith("operation,left,right,result,timestamp\n")
-    assert ",1.20,2.30,3.50," in csv
+    contents = (tmp_path / "archive/history.csv").read_text(encoding="utf-16")
+    record = next(csv.DictReader(contents.splitlines()))
+    assert list(record) == ["operation", "operands", "result", "timestamp"]
+    assert json.loads(record["operands"]) == ["1.20", "2.30"]
+    assert record["result"] == "3.50"

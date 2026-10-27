@@ -217,10 +217,11 @@ control writes with `save`.
 History is stored using pandas with these CSV columns:
 
 ```csv
-operation,left,right,result,timestamp
-add,1.20,2.30,3.50,2026-10-27T12:00:00+00:00
+operation,operands,result,timestamp
+add,"[""1.20"", ""2.30""]",3.50,2026-10-27T12:00:00+00:00
 ```
 
+The `operands` column contains a JSON array of two numeric strings.
 Numeric representations and timestamps are preserved when records are loaded.
 Current precision and input limits apply to new calculations; loaded records are
 not recalculated or rounded again. Saving empty history writes the header only.

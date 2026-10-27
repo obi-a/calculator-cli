@@ -112,7 +112,7 @@ class Calculator:
             record = calculation.to_record()
             print(
                 f"{index}. [{record['timestamp']}] "
-                f"{record['operation']} {record['left']} {record['right']} "
+                f"{record['operation']} {calculation.left} {calculation.right} "
                 f"= {record['result']}"
             )
 

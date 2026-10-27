@@ -6,4 +6,8 @@ class CalculatorError(ValueError):
 
 
 class ConfigurationError(CalculatorError):
-    """Startup settings prevent the application from logging to its file."""
+    """Invalid startup settings prevent the application from running."""
+
+
+class HistoryError(CalculatorError):
+    """Calculation history could not be saved or loaded."""

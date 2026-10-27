@@ -4,12 +4,16 @@ import logging
 from pathlib import Path
 import sys
 
+from app.console import print_message
 from app.exceptions import ConfigurationError
 
 
 def _report_error(error: BaseException | None, message: str) -> None:
     """Report a failed log write without attempting to use the file again."""
-    print(f"ERROR: Could not write calculator log ({error}): {message}", file=sys.stderr)
+    print_message(
+        f"ERROR: Could not write calculator log ({error}): {message}",
+        "error", file=sys.stderr,
+    )
 
 
 class _FileHandler(logging.FileHandler):

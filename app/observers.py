@@ -6,6 +6,7 @@ import sys
 from typing import Generic, Protocol, TypeVar
 
 from app.calculation import Calculation
+from app.console import print_message
 from app.exceptions import HistoryError
 from app.history import CalculationHistory
 from app.logger import Logger
@@ -101,6 +102,8 @@ class AutoSaveObserver:
             self._history.save(event.calculations)
         except HistoryError as error:
             self._logger.error("Auto-save failed: %s", error)
-            print(f"Warning: Auto-save failed: {error}", file=sys.stderr)
+            print_message(
+                f"Warning: Auto-save failed: {error}", "warning", file=sys.stderr
+            )
         else:
             self._logger.info("History auto-saved after %s", event.action)

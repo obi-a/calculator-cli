@@ -8,6 +8,7 @@ from typing import cast
 from app.calculation import Calculation
 from app.calculator_config import CalculatorConfig
 from app.calculator_memento import CalculatorMemento
+from app.console import format_message, initialize_console, print_message
 from app.exceptions import CalculatorError, HistoryError
 from app.factory import OperationFactory
 from app.history import CalculationHistory
@@ -117,19 +118,19 @@ class Calculator:
             return
         self._change_history(self._history.clear)
         self._history_changed("clear")
-        print("History cleared.")
+        print_message("History cleared.", "success")
 
     def save_history(self) -> None:
         """Save current entries without creating an undo checkpoint."""
         self._history.save()
         self._logger.info("History saved to %s", self._config.history_file)
-        print(f"History saved to {self._config.history_file}.")
+        print_message(f"History saved to {self._config.history_file}.", "success")
 
     def load_history(self) -> None:
         """Replace history only when the complete file has been validated."""
         self._change_history(self._history.load)
         self._history_changed("load")
-        print(f"Loaded {len(self.history)} calculation(s).")
+        print_message(f"Loaded {len(self.history)} calculation(s).", "success")
 
     def _restore(
         self,
@@ -142,7 +143,7 @@ class Calculator:
         target.append(CalculatorMemento(self.history))
         self._history.replace(source.pop().calculations)
         self._history_changed(action)
-        print(f"{action.capitalize()} complete.")
+        print_message(f"{action.capitalize()} complete.", "success")
 
     def undo(self) -> None:
         """Restore the history state before the last successful change."""
@@ -160,14 +161,15 @@ class Calculator:
     def run(self) -> int:
         """Run the REPL, recovering from expected errors between commands."""
         try:
+            initialize_console()
             self._logger.info("Calculator session started")
-            print("Enhanced Calculator. Type 'help' for commands.")
+            print_message("Enhanced Calculator. Type 'help' for commands.", "info")
             while True:
                 try:
-                    if not self.execute_line(input("calc> ")):
+                    if not self.execute_line(input(format_message("calc> ", "info"))):
                         break
                 except CalculatorError as error:
-                    print(f"Error: {error}")
+                    print_message(f"Error: {error}", "error")
                 except (EOFError, KeyboardInterrupt):
                     print()
                     break
@@ -216,7 +218,7 @@ class Calculator:
             raise
 
         result = cast(Decimal, calculation.result)
-        print(result)
+        print_message(result, "success")
         self._calculation_observers.notify(
             CalculationEvent(name, left, right, result)
         )
@@ -226,7 +228,7 @@ class Calculator:
     def _print_help(self) -> None:
         """Build arithmetic help from the same registry used for execution."""
         self._logger.info("Help requested")
-        print("Commands (exactly two numbers per calculation):")
+        print_message("Commands (exactly two numbers per calculation):", "info")
         for name in OperationFactory.supported_operations():
             print(f"  {name} <number> <number>")
         for name, (_, description) in self._commands.items():

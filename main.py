@@ -3,15 +3,17 @@
 import sys
 
 from app.calculator import Calculator
+from app.console import initialize_console, print_message
 from app.exceptions import ConfigurationError
 
 
 def main() -> int:
     """Run the interactive calculator and return its process exit status."""
+    initialize_console()
     try:
         calculator = Calculator()
     except ConfigurationError as error:
-        print(f"Error: {error}", file=sys.stderr)
+        print_message(f"Error: {error}", "error", file=sys.stderr)
         return 1
     try:
         return calculator.run()

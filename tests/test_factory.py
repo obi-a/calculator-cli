@@ -1,5 +1,7 @@
 """Operation registration, name normalization, and unknown commands."""
 
+from unittest.mock import Mock
+
 import pytest
 
 from app.exceptions import CalculatorError
@@ -11,6 +13,7 @@ from app.operations import (
     IntDivideOperation,
     ModulusOperation,
     MultiplyOperation,
+    Operation,
     PercentOperation,
     PowerOperation,
     RootOperation,
@@ -37,6 +40,7 @@ def test_factory_creates_operations(name, expected_type):
     operation = OperationFactory.create(name)
     assert isinstance(operation, expected_type)
     assert operation is not OperationFactory.create(name)
+    assert OperationFactory.name_for(operation) == name.strip().lower()
 
 
 @pytest.mark.parametrize("name", ["unknown", ""])
@@ -50,3 +54,8 @@ def test_factory_lists_supported_commands():
         "add", "subtract", "multiply", "divide", "power", "root", "modulus",
         "int_divide", "percent", "abs_diff",
     )
+
+
+def test_factory_rejects_unregistered_receivers():
+    with pytest.raises(CalculatorError, match="Unregistered operation"):
+        OperationFactory.name_for(Mock(spec=Operation))

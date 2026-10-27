@@ -1,4 +1,4 @@
-"""The executable wrapper starts the REPL and preserves its exit status."""
+"""Executable startup, exit status, and safe imports."""
 
 from pathlib import Path
 import runpy
@@ -16,14 +16,25 @@ def test_main_returns_repl_exit_status(monkeypatch):
     assert main() == 7
 
 
-def test_executable_entry_point(monkeypatch, capsys):
+@pytest.mark.parametrize("log_file,expected_status", [("calculator.log", 0), ("", 1)])
+def test_executable_startup(log_file, expected_status, monkeypatch, capsys):
+    monkeypatch.setenv("CALCULATOR_LOG_FILE", log_file)
     monkeypatch.setattr("builtins.input", lambda prompt: "exit")
+
     with pytest.raises(SystemExit) as exit_status:
         runpy.run_path(str(ENTRY_POINT), run_name="__main__")
-    assert exit_status.value.code == 0
-    assert "Goodbye!" in capsys.readouterr().out
+
+    assert exit_status.value.code == expected_status
+    captured = capsys.readouterr()
+    if expected_status == 0:
+        assert "Goodbye!" in captured.out
+    else:
+        assert "CALCULATOR_LOG_FILE must not be blank" in captured.err
+        assert captured.out == ""
 
 
-def test_importing_entry_point_does_not_start_a_session(capsys):
+def test_import_does_not_start_calculator_or_create_logs(monkeypatch, tmp_path, capsys):
+    monkeypatch.setenv("CALCULATOR_LOG_FILE", "")
     runpy.run_path(str(ENTRY_POINT), run_name="calculator_import_check")
     assert capsys.readouterr().out == ""
+    assert list(tmp_path.iterdir()) == []

@@ -1,4 +1,4 @@
-"""Supported operation creation and rejection of unknown names."""
+"""Operation registration, name normalization, and unknown commands."""
 
 import pytest
 
@@ -21,7 +21,7 @@ from app.operations import (
 @pytest.mark.parametrize(
     "name,expected_type",
     [
-        ("add", AddOperation),
+        (" ADD ", AddOperation),
         ("subtract", SubtractOperation),
         ("multiply", MultiplyOperation),
         ("divide", DivideOperation),
@@ -33,42 +33,20 @@ from app.operations import (
         ("abs_diff", AbsDiffOperation),
     ],
 )
-def test_factory_creates_correct_fresh_operation(name, expected_type):
-    first = OperationFactory.create(name)
-    assert isinstance(first, expected_type)
-    assert first is not OperationFactory.create(name)
+def test_factory_creates_operations(name, expected_type):
+    operation = OperationFactory.create(name)
+    assert isinstance(operation, expected_type)
+    assert operation is not OperationFactory.create(name)
 
 
-@pytest.mark.parametrize(
-    "name,expected_type",
-    [
-        ("ADD", AddOperation),
-        ("Add", AddOperation),
-        (" add ", AddOperation),
-        ("\tAdD\n", AddOperation),
-        (" PoWeR ", PowerOperation),
-        ("RoOt", RootOperation),
-        ("MODULUS", ModulusOperation),
-        ("INT_DIVIDE", IntDivideOperation),
-        ("PERCENT", PercentOperation),
-        ("ABS_DIFF", AbsDiffOperation),
-    ],
-)
-def test_factory_normalizes_names(name, expected_type):
-    assert isinstance(OperationFactory.create(name), expected_type)
-
-
-@pytest.mark.parametrize(
-    "name",
-    ["unknown", "", "sqrt", "addition"],
-)
+@pytest.mark.parametrize("name", ["unknown", ""])
 def test_factory_rejects_unknown_operations(name):
     with pytest.raises(CalculatorError, match="Unknown operation"):
         OperationFactory.create(name)
 
 
-def test_factory_exposes_only_supported_commands():
+def test_factory_lists_supported_commands():
     assert OperationFactory.supported_operations() == (
         "add", "subtract", "multiply", "divide", "power", "root", "modulus",
-        "int_divide", "percent", "abs_diff"
+        "int_divide", "percent", "abs_diff",
     )

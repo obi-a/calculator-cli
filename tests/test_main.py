@@ -38,3 +38,20 @@ def test_import_does_not_start_calculator_or_create_logs(monkeypatch, tmp_path, 
     runpy.run_path(str(ENTRY_POINT), run_name="calculator_import_check")
     assert capsys.readouterr().out == ""
     assert list(tmp_path.iterdir()) == []
+
+
+def test_entry_point_applies_encoding_to_logs_and_auto_save(monkeypatch, tmp_path):
+    (tmp_path / ".env").write_text(
+        "CALCULATOR_DEFAULT_ENCODING=utf-16\n"
+        "CALCULATOR_HISTORY_FILE=archive/history.csv\n"
+    )
+    commands = iter(["add 1.20 2.30", "undo", "redo", "exit"])
+    monkeypatch.setattr("builtins.input", lambda prompt: next(commands))
+
+    assert main() == 0
+
+    log = (tmp_path / "logs/calculator.log").read_text(encoding="utf-16")
+    assert "INFO Calculation operation=add left=1.20 right=2.30 result=3.50" in log
+    csv = (tmp_path / "archive/history.csv").read_text(encoding="utf-16")
+    assert csv.startswith("operation,left,right,result,timestamp\n")
+    assert ",1.20,2.30,3.50," in csv

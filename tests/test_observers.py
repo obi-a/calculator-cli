@@ -6,17 +6,31 @@ from unittest.mock import Mock
 import pytest
 
 from app.exceptions import CalculatorError
-from app.observers import CalculationEvent, CalculationObserver
+from app.observers import (
+    CalculationEvent,
+    CalculationObserver,
+    HistoryChangedEvent,
+    HistoryObserver,
+)
 
 
 def test_observers_receive_calculation_details(calculator):
     observer = Mock(spec=CalculationObserver)
+    history_observer = Mock(spec=HistoryObserver)
     calculator.register_observer(observer)
+    calculator.register_history_observer(history_observer)
     calculator.execute_line("add 1.20 2.30")
 
     observer.update.assert_called_once_with(
         CalculationEvent("add", Decimal("1.20"), Decimal("2.30"), Decimal("3.50"))
     )
+    history_observer.update.assert_called_once_with(
+        HistoryChangedEvent("calculation", calculator.history)
+    )
+    calculator.remove_history_observer(history_observer)
+    calculator.undo()
+    observer.update.assert_called_once()
+    history_observer.update.assert_called_once()
 
 
 def test_registering_twice_and_removing_observers(calculator):

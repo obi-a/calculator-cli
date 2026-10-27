@@ -31,6 +31,11 @@ class Calculator:
     def __init__(
         self, logger: Logger | None = None, *, config: CalculatorConfig | None = None
     ) -> None:
+        """Load configuration unless supplied, preserving logger-only injection.
+
+        A logger supplied without config uses defaults without reading .env.
+        Supplied loggers remain owned by their callers.
+        """
         if config is None:
             config = (
                 CalculatorConfig.defaults() if logger is not None else CalculatorConfig.load()
@@ -87,6 +92,7 @@ class Calculator:
         self._history_observers.remove(observer)
 
     def _change_history(self, change: Callable[[], None]) -> None:
+        """Record the prior state only after the requested change succeeds."""
         before = CalculatorMemento(self.history)
         change()
         self._undo_stack.append(before)
@@ -138,6 +144,7 @@ class Calculator:
         target: deque[CalculatorMemento],
         action: str,
     ) -> None:
+        """Move snapshots between stacks and restore records without recalculating."""
         if not source:
             raise CalculatorError(f"Nothing to {action}.")
         target.append(CalculatorMemento(self.history))

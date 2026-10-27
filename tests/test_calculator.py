@@ -53,6 +53,7 @@ def test_help_lists_commands(run_session, tmp_path):
         ("divide 1", "Usage: divide"),
         ("power 1 2 3", "Usage: power"),
         ("exit 1", "Usage: exit"),
+        ("load unexpected.csv", "Usage: load"),
         ("add nope 2", "Invalid number"),
         ("divide 1 -0", "Cannot divide by zero"),
     ],
@@ -97,7 +98,7 @@ def test_unexpected_errors_are_logged_and_raised(monkeypatch, run_session, tmp_p
 @pytest.mark.parametrize("injected", [False, True])
 def test_calculator_only_closes_its_own_logger(injected, monkeypatch):
     logger = Mock(spec=Logger)
-    monkeypatch.setattr("app.calculator.Logger", lambda path: logger)
+    monkeypatch.setattr("app.calculator.Logger", lambda path, **kwargs: logger)
     monkeypatch.setattr("builtins.input", lambda prompt: "exit")
     calculator = Calculator(logger=logger) if injected else Calculator()
 

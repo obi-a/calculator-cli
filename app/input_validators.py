@@ -5,12 +5,14 @@ from decimal import Context, Decimal, InvalidOperation
 from app.exceptions import CalculatorError
 
 
-def validate_operand(value: Decimal) -> None:
+def validate_operand(value: Decimal, max_value: Decimal | None = None) -> None:
     """Require a finite Decimal, avoiding implicit conversion from floats."""
     if not isinstance(value, Decimal):
         raise CalculatorError("Operands must be Decimal numbers.")
     if not value.is_finite():
         raise CalculatorError("Operands must be finite decimal numbers.")
+    if max_value is not None and value.copy_abs() > max_value:
+        raise CalculatorError(f"Input magnitude must not exceed {max_value}.")
 
 
 def validate_nonzero(
@@ -27,7 +29,7 @@ def validate_integer(value: Decimal, message: str) -> None:
         raise CalculatorError(message)
 
 
-def parse_number(text: str) -> Decimal:
+def parse_number(text: str, max_value: Decimal | None = None) -> Decimal:
     """Parse numerical text without introducing binary floating-point error."""
     try:
         # A separate context also keeps invalid input from setting caller flags.
@@ -36,5 +38,5 @@ def parse_number(text: str) -> Decimal:
         raise CalculatorError(
             f"Invalid number {text!r}. Use a finite decimal number."
         ) from error
-    validate_operand(value)
+    validate_operand(value, max_value)
     return value

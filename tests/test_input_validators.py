@@ -49,3 +49,15 @@ def test_parsing_preserves_decimal_context():
         with pytest.raises(CalculatorError, match="Invalid number"):
             parse_number("not-a-number")
         assert str(context) == before
+
+
+@pytest.mark.parametrize(
+    "value,allowed",
+    [("10", True), ("-10", True), ("10.01", False), ("-10.01", False)],
+)
+def test_input_magnitude_limit(value, allowed):
+    if allowed:
+        assert parse_number(value, Decimal(10)) == Decimal(value)
+    else:
+        with pytest.raises(CalculatorError, match="must not exceed"):
+            parse_number(value, Decimal(10))

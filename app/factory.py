@@ -50,3 +50,11 @@ class OperationFactory:
     def supported_operations(cls) -> tuple[str, ...]:
         """Return registered names in their help-display order."""
         return tuple(cls._operations)
+
+    @classmethod
+    def name_for(cls, operation: Operation) -> str:
+        """Find a receiver's canonical name using the existing registry."""
+        for name, operation_type in cls._operations.items():
+            if type(operation) is operation_type:
+                return name
+        raise CalculatorError(f"Unregistered operation: {type(operation).__name__}.")

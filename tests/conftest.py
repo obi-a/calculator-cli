@@ -1,11 +1,13 @@
 """Reusable fixtures for interactive calculator sessions."""
 
 from collections.abc import Callable
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
 
 from app.calculator import Calculator
+from app.calculator_config import CalculatorConfig
 from app.logger import Logger
 
 
@@ -14,7 +16,9 @@ def isolated_config(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Path:
     """Keep dotenv changes and all default log files inside this test's directory."""
     monkeypatch.setattr("app.calculator_config.PROJECT_ROOT", tmp_path)
     for name in (
-        "CALCULATOR_LOG_DIR", "CALCULATOR_LOG_FILE", "PYTHON_DOTENV_DISABLED"
+        "CALCULATOR_LOG_DIR", "CALCULATOR_LOG_FILE", "PYTHON_DOTENV_DISABLED",
+        "CALCULATOR_HISTORY_FILE", "CALCULATOR_MAX_HISTORY_SIZE", "CALCULATOR_AUTO_SAVE",
+        "CALCULATOR_PRECISION", "CALCULATOR_MAX_INPUT_VALUE", "CALCULATOR_DEFAULT_ENCODING",
     ):
         # Record absent keys too, so values later added by dotenv are restored.
         monkeypatch.setenv(name, "")
@@ -31,9 +35,15 @@ def logger(tmp_path):
 
 
 @pytest.fixture
-def calculator(logger):
+def config():
+    """Use normal defaults with auto-save disabled for unrelated unit tests."""
+    return replace(CalculatorConfig.defaults(), auto_save=False)
+
+
+@pytest.fixture
+def calculator(logger, config):
     """Inject a logger so individual command tests need no startup configuration."""
-    return Calculator(logger=logger)
+    return Calculator(logger=logger, config=config)
 
 
 @pytest.fixture
@@ -53,7 +63,8 @@ def run_session(
             return response
 
         monkeypatch.setattr("builtins.input", read_input)
-        status = Calculator().run()
+        config = replace(CalculatorConfig.load(), auto_save=False)
+        status = Calculator(config=config).run()
         return status, capsys.readouterr().out
 
     return run

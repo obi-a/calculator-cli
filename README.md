@@ -111,6 +111,7 @@ python main.py
 ```
 
 Enter commands at the `calc>` prompt. Use `help` to see the available commands.
+The help menu updates automatically when new operations are registered.
 These examples use the default settings:
 
 ```text

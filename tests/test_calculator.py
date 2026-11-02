@@ -8,6 +8,7 @@ import pytest
 from app.calculator import Calculator
 from app.factory import OperationFactory
 from app.logger import Logger
+from app.operations import AddOperation
 
 
 @pytest.mark.parametrize(
@@ -43,6 +44,20 @@ def test_help_lists_commands(run_session, tmp_path):
         assert f"{name} <number> <number>" in output
     assert "exit / quit" in output
     assert "INFO Help requested" in (tmp_path / "logs/calculator.log").read_text()
+
+
+def test_new_operation_appears_in_help_and_executes(calculator, monkeypatch, capsys):
+    class SumOperation(AddOperation):
+        """A distinct operation registered after Calculator construction."""
+
+    monkeypatch.setitem(OperationFactory._operations, "sum", SumOperation)
+
+    calculator.execute_line("help")
+    assert "  sum <number> <number>\n" in capsys.readouterr().out
+
+    calculator.execute_line("sum 2 3")
+    assert capsys.readouterr().out == "5\n"
+    assert calculator.history[-1].operation_name == "sum"
 
 
 @pytest.mark.parametrize(

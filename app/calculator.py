@@ -11,6 +11,7 @@ from app.calculator_memento import CalculatorMemento
 from app.console import format_message, initialize_console, print_message
 from app.exceptions import CalculatorError, HistoryError
 from app.factory import OperationFactory
+from app.help_menu import BasicHelpMenu, OperationHelpDecorator
 from app.history import CalculationHistory
 from app.input_validators import parse_number
 from app.logger import Logger
@@ -233,17 +234,22 @@ class Calculator:
         return True
 
     def _print_help(self) -> None:
-        """Build arithmetic help from the same registry used for execution."""
+        """Decorate the base help menu with the currently registered operations."""
         self._logger.info("Help requested")
         print_message("Commands (exactly two numbers per calculation):", "info")
-        for name in OperationFactory.supported_operations():
-            print(f"  {name} <number> <number>")
-        for name, (_, description) in self._commands.items():
-            print(f"  {name:<22}{description}")
-        print("  exit / quit           Exit the calculator")
-        print("Examples: add 0.1 0.2; divide 7 2; multiply -2 1e3")
-        print("More examples: power 2 -3; root -8 3; percent 25 200")
-        print("Root degree: a nonzero integer; negative numbers require odd degrees.")
-        print("Precision: 28 significant digits, round-half-even.")
-        print(f"Fractional digit limit: {self._config.precision}.")
-        print(f"Maximum input magnitude: {self._config.max_input_value}.")
+        session_lines = tuple(
+            f"  {name:<22}{description}"
+            for name, (_, description) in self._commands.items()
+        )
+        base_menu = BasicHelpMenu(session_lines + (
+            "  exit / quit           Exit the calculator",
+            "Examples: add 0.1 0.2; divide 7 2; multiply -2 1e3",
+            "More examples: power 2 -3; root -8 3; percent 25 200",
+            "Root degree: a nonzero integer; negative numbers require odd degrees.",
+            "Precision: 28 significant digits, round-half-even.",
+            f"Fractional digit limit: {self._config.precision}.",
+            f"Maximum input magnitude: {self._config.max_input_value}.",
+        ))
+        menu = OperationHelpDecorator(base_menu)
+        for line in menu.render():
+            print(line)

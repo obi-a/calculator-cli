@@ -55,7 +55,8 @@ Edit `.env` to change the settings:
 | ----------------------------- | ---------------- | ----------------------------------------------------------------------------------------------------------- |
 | `CALCULATOR_LOG_DIR`          | `logs`           | Base directory for relative log file paths.                                                                 |
 | `CALCULATOR_LOG_FILE`         | `calculator.log` | Log filename or path. Relative paths start inside the log directory; absolute paths are used directly.      |
-| `CALCULATOR_HISTORY_FILE`     | `history.csv`    | CSV destination for saving and loading history. Relative paths start at the project root.                   |
+| `CALCULATOR_HISTORY_DIR`      | `history`        | Base directory for relative history file paths. Relative directories start at the project root.             |
+| `CALCULATOR_HISTORY_FILE`     | `calculator_history.csv` | CSV filename or path. Relative paths start inside the history directory; absolute paths are used directly. |
 | `CALCULATOR_MAX_HISTORY_SIZE` | `1000`           | Maximum retained history entries and the depth of each undo/redo stack. Must be an integer of at least `1`. |
 | `CALCULATOR_AUTO_SAVE`        | `true`           | Save after each history change. Accepts `true` or `false`, case-insensitively.                              |
 | `CALCULATOR_PRECISION`        | `28`             | Maximum fractional digits in new results. Must be a nonnegative integer; `0` rounds to a whole number.      |
@@ -67,13 +68,13 @@ take precedence over values in the file. Missing variables use the defaults, so
 the calculator can also run without a `.env` file. Blank or invalid settings
 produce a startup error.
 
-Relative log directories and history paths are resolved from the project root,
+Relative log and history directories are resolved from the project root,
 regardless of the working directory. Paths can also be absolute or start with
 `~`. The history and log files must have different destinations. Parent
 directories are created when the application needs to write to them.
 
 The `.env` file itself is read as UTF-8. Keep it local: it is ignored by Git,
-along with the default log directory and history file. If you choose a custom
+along with the default log and history directories. If you choose a custom
 history location inside the repository, add it to `.gitignore` as needed.
 
 ### Logging
@@ -178,7 +179,8 @@ Some operations have additional rules:
 ### Session and history commands
 
 These commands take no arguments. `save` and `load` use
-`CALCULATOR_HISTORY_FILE`; a filename is not supplied at the prompt.
+`CALCULATOR_HISTORY_FILE`, resolved inside `CALCULATOR_HISTORY_DIR` when relative;
+a filename is not supplied at the prompt.
 
 | Command         | What it does                                                                    |
 | --------------- | ------------------------------------------------------------------------------- |
@@ -192,6 +194,10 @@ These commands take no arguments. `save` and `load` use
 | `exit` / `quit` | End the session. EOF and Ctrl+C also exit cleanly.                              |
 
 ### Saving and restoring history
+
+The default history destination is `history/calculator_history.csv`.
+To keep using an existing file elsewhere, set `CALCULATOR_HISTORY_FILE` to its
+absolute path. Existing files are not moved automatically.
 
 Each session starts with empty in-memory history. To resume an existing saved
 history, run `load` before entering new calculations. With auto-save enabled,

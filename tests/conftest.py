@@ -17,7 +17,8 @@ def isolated_config(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Path:
     monkeypatch.setattr("app.calculator_config.PROJECT_ROOT", tmp_path)
     for name in (
         "CALCULATOR_LOG_DIR", "CALCULATOR_LOG_FILE", "PYTHON_DOTENV_DISABLED",
-        "CALCULATOR_HISTORY_FILE", "CALCULATOR_MAX_HISTORY_SIZE", "CALCULATOR_AUTO_SAVE",
+        "CALCULATOR_HISTORY_DIR", "CALCULATOR_HISTORY_FILE",
+        "CALCULATOR_MAX_HISTORY_SIZE", "CALCULATOR_AUTO_SAVE",
         "CALCULATOR_PRECISION", "CALCULATOR_MAX_INPUT_VALUE", "CALCULATOR_DEFAULT_ENCODING",
     ):
         # Record absent keys too, so values later added by dotenv are restored.

@@ -70,6 +70,7 @@ def test_invalid_csv_keeps_existing_history(contents, entry, config):
     history = CalculationHistory(config)
     history.add(entry)
     if contents is not None:
+        config.history_file.parent.mkdir(parents=True, exist_ok=True)
         config.history_file.write_text(contents)
 
     with pytest.raises(HistoryError):
@@ -96,6 +97,7 @@ def test_invalid_rows_are_rejected_together(field, value, entry, config):
     history.add(entry)
     valid = dict(entry.to_record(), operands='["1", "2"]', result="3")
     invalid = dict(entry.to_record(), **{field: value})
+    config.history_file.parent.mkdir(parents=True, exist_ok=True)
     pd.DataFrame([valid, invalid]).to_csv(config.history_file, index=False)
 
     with pytest.raises(HistoryError, match="Invalid history row 3"):
@@ -216,6 +218,7 @@ def test_failed_load_preserves_redo(calculator, config, tmp_path):
     calculator.execute_line("add 3 4")
     before = calculator.history
     calculator.undo()
+    config.history_file.parent.mkdir(parents=True, exist_ok=True)
     config.history_file.write_text("invalid,columns\n")
 
     with pytest.raises(HistoryError):

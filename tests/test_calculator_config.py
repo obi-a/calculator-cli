@@ -14,19 +14,23 @@ def test_default_configuration(tmp_path):
     config = CalculatorConfig.load()
     assert config.log_dir == tmp_path / "logs"
     assert config.log_file == tmp_path / "logs/calculator.log"
-    assert config.history_file == tmp_path / "history.csv"
+    assert config.history_dir == tmp_path / "history"
+    assert config.history_file == tmp_path / "history/calculator_history.csv"
     assert config.max_history_size == 1000
     assert config.auto_save is True
     assert config.precision == 28
     assert config.max_input_value == Decimal("1e10")
     assert config.default_encoding == "utf-8"
+    assert CalculatorConfig.defaults() == config
     assert list(tmp_path.iterdir()) == []
 
 
 def test_project_dotenv_is_loaded_from_any_working_directory(tmp_path, monkeypatch):
     (tmp_path / ".env").write_text(
         'CALCULATOR_LOG_DIR="custom logs"\n'
-        'CALCULATOR_LOG_FILE="sessions/calculations.txt"\n',
+        'CALCULATOR_LOG_FILE="sessions/calculations.txt"\n'
+        'CALCULATOR_HISTORY_DIR="custom history"\n'
+        'CALCULATOR_HISTORY_FILE="sessions/calculations.csv"\n',
         encoding="utf-8",
     )
     working_dir = tmp_path / "elsewhere"
@@ -36,38 +40,59 @@ def test_project_dotenv_is_loaded_from_any_working_directory(tmp_path, monkeypat
     config = CalculatorConfig.load()
     assert config.log_dir == tmp_path / "custom logs"
     assert config.log_file == tmp_path / "custom logs/sessions/calculations.txt"
+    assert config.history_dir == tmp_path / "custom history"
+    assert config.history_file == tmp_path / "custom history/sessions/calculations.csv"
 
 
 @pytest.mark.parametrize(
-    "setting,value,expected_dir,expected_file",
+    "kind,setting,value,expected_dir,expected_file",
     [
-        ("CALCULATOR_LOG_DIR", "env_logs", "env_logs", "dotenv.log"),
-        ("CALCULATOR_LOG_FILE", "env.log", "dotenv_logs", "env.log"),
+        ("log", "CALCULATOR_LOG_DIR", "env_logs", "env_logs", "dotenv.log"),
+        ("log", "CALCULATOR_LOG_FILE", "env.log", "dotenv_logs", "env.log"),
+        ("history", "CALCULATOR_HISTORY_DIR", "env_history", "env_history", "dotenv.csv"),
+        ("history", "CALCULATOR_HISTORY_FILE", "env.csv", "dotenv_history", "env.csv"),
     ],
 )
 def test_environment_overrides_dotenv(
-    setting, value, expected_dir, expected_file, tmp_path, monkeypatch
+    kind, setting, value, expected_dir, expected_file, tmp_path, monkeypatch
 ):
     (tmp_path / ".env").write_text(
         "CALCULATOR_LOG_DIR=dotenv_logs\nCALCULATOR_LOG_FILE=dotenv.log\n"
+        "CALCULATOR_HISTORY_DIR=dotenv_history\nCALCULATOR_HISTORY_FILE=dotenv.csv\n"
     )
     monkeypatch.setenv(setting, value)
 
     config = CalculatorConfig.load()
-    assert config.log_dir == tmp_path / expected_dir
-    assert config.log_file == tmp_path / expected_dir / expected_file
+    assert getattr(config, f"{kind}_dir") == tmp_path / expected_dir
+    assert getattr(config, f"{kind}_file") == tmp_path / expected_dir / expected_file
 
 
 @pytest.mark.parametrize(
-    "setting,destination,expected_file",
+    "setting,destination,attribute,expected_file",
     [
-        ("CALCULATOR_LOG_DIR", "absolute", "absolute/calculator.log"),
-        ("CALCULATOR_LOG_FILE", "absolute/custom.log", "absolute/custom.log"),
+        ("CALCULATOR_LOG_DIR", "absolute", "log_file", "absolute/calculator.log"),
+        ("CALCULATOR_LOG_FILE", "absolute/custom.log", "log_file", "absolute/custom.log"),
+        (
+            "CALCULATOR_HISTORY_DIR", "absolute", "history_file",
+            "absolute/calculator_history.csv",
+        ),
+        (
+            "CALCULATOR_HISTORY_FILE", "absolute/custom.csv", "history_file",
+            "absolute/custom.csv",
+        ),
     ],
 )
-def test_absolute_paths(setting, destination, expected_file, tmp_path, monkeypatch):
+def test_absolute_paths(setting, destination, attribute, expected_file, tmp_path, monkeypatch):
     monkeypatch.setenv(setting, str(tmp_path / destination))
-    assert CalculatorConfig.load().log_file == tmp_path / expected_file
+    assert getattr(CalculatorConfig.load(), attribute) == tmp_path / expected_file
+
+
+def test_history_directory_expands_home(tmp_path, monkeypatch):
+    monkeypatch.setenv("CALCULATOR_HISTORY_DIR", f"~/{tmp_path.name}")
+    config = CalculatorConfig.load()
+
+    assert config.history_dir == Path.home() / tmp_path.name
+    assert config.history_file == config.history_dir / "calculator_history.csv"
 
 
 @pytest.mark.parametrize(
@@ -77,6 +102,7 @@ def test_absolute_paths(setting, destination, expected_file, tmp_path, monkeypat
         ("CALCULATOR_LOG_DIR", " "),
         ("CALCULATOR_LOG_FILE", ""),
         ("CALCULATOR_LOG_FILE", "\t"),
+        ("CALCULATOR_HISTORY_DIR", " "),
         ("CALCULATOR_HISTORY_FILE", " "),
     ],
 )
@@ -100,15 +126,25 @@ def test_invalid_path_reports_configuration_error(monkeypatch):
         CalculatorConfig.load()
 
 
+def test_history_directory_cannot_be_a_file(tmp_path, monkeypatch):
+    destination = tmp_path / "occupied"
+    destination.write_text("not a directory")
+    monkeypatch.setenv("CALCULATOR_HISTORY_DIR", str(destination))
+
+    with pytest.raises(ConfigurationError, match="CALCULATOR_HISTORY_DIR must be a directory"):
+        CalculatorConfig.load()
+
+
 def test_history_and_calculation_settings_from_dotenv(tmp_path):
-    destination = tmp_path / "saved/history.csv"
+    destination = tmp_path / "saved/custom.csv"
     (tmp_path / ".env").write_text(
-        f"CALCULATOR_HISTORY_FILE={destination}\n"
+        "CALCULATOR_HISTORY_DIR=saved\nCALCULATOR_HISTORY_FILE=custom.csv\n"
         "CALCULATOR_MAX_HISTORY_SIZE=2\nCALCULATOR_AUTO_SAVE=FaLsE\n"
         "CALCULATOR_PRECISION=2\nCALCULATOR_MAX_INPUT_VALUE=99.5\n"
         "CALCULATOR_DEFAULT_ENCODING=utf-16\n"
     )
     config = CalculatorConfig.load()
+    assert config.history_dir == tmp_path / "saved"
     assert config.history_file == destination
     assert config.max_history_size == 2
     assert config.auto_save is False
@@ -128,7 +164,7 @@ def test_history_and_calculation_settings_from_dotenv(tmp_path):
         ("CALCULATOR_MAX_INPUT_VALUE", "0"),
         ("CALCULATOR_AUTO_SAVE", "yes"),
         ("CALCULATOR_DEFAULT_ENCODING", "not-an-encoding"),
-        ("CALCULATOR_HISTORY_FILE", "logs/calculator.log"),
+        ("CALCULATOR_HISTORY_FILE", "../logs/calculator.log"),
     ],
 )
 def test_invalid_history_and_calculation_settings(setting, value, monkeypatch):

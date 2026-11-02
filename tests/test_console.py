@@ -78,7 +78,9 @@ def test_terminal_session_keeps_persisted_data_plain(monkeypatch, run_session, t
     assert "  add <number> <number>\n" in output
     assert "add 1.20 2.30 = 3.50\n" in output
     assert output.endswith("Goodbye!\n")
-    for path in (tmp_path / "logs/calculator.log", tmp_path / "history.csv"):
+    for path in (
+        tmp_path / "logs/calculator.log", tmp_path / "history/calculator_history.csv"
+    ):
         assert "\x1b[" not in path.read_text()
 
 

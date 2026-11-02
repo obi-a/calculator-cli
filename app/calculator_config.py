@@ -40,7 +40,12 @@ class CalculatorConfig:
 
     log_dir: Path
     log_file: Path
-    history_file: Path = field(default_factory=lambda: PROJECT_ROOT / "history.csv")
+    history_dir: Path = field(
+        default_factory=lambda: PROJECT_ROOT / "history", kw_only=True
+    )
+    history_file: Path = field(
+        default_factory=lambda: PROJECT_ROOT / "history/calculator_history.csv"
+    )
     max_history_size: int = 1000
     auto_save: bool = True
     precision: int = 28
@@ -48,6 +53,8 @@ class CalculatorConfig:
     default_encoding: str = "utf-8"
 
     def __post_init__(self) -> None:
+        if self.history_dir.exists() and not self.history_dir.is_dir():
+            raise ConfigurationError("CALCULATOR_HISTORY_DIR must be a directory.")
         for name, value, minimum in (
             ("CALCULATOR_MAX_HISTORY_SIZE", self.max_history_size, 1),
             ("CALCULATOR_PRECISION", self.precision, 0),
@@ -87,12 +94,14 @@ class CalculatorConfig:
 
         log_dir_value = _setting("CALCULATOR_LOG_DIR", "logs")
         log_file_value = _setting("CALCULATOR_LOG_FILE", "calculator.log")
-        history_file_value = _setting("CALCULATOR_HISTORY_FILE", "history.csv")
+        history_dir_value = _setting("CALCULATOR_HISTORY_DIR", "history")
+        history_file_value = _setting("CALCULATOR_HISTORY_FILE", "calculator_history.csv")
 
         try:
             log_dir = _resolve_path(log_dir_value, PROJECT_ROOT)
             log_file = _resolve_path(log_file_value, log_dir)
-            history_file = _resolve_path(history_file_value, PROJECT_ROOT)
+            history_dir = _resolve_path(history_dir_value, PROJECT_ROOT)
+            history_file = _resolve_path(history_file_value, history_dir)
         except (OSError, RuntimeError, ValueError) as error:
             raise ConfigurationError(f"Invalid configuration path: {error}") from error
 
@@ -112,6 +121,7 @@ class CalculatorConfig:
         return cls(
             log_dir=log_dir,
             log_file=log_file,
+            history_dir=history_dir,
             history_file=history_file,
             max_history_size=_integer_setting("CALCULATOR_MAX_HISTORY_SIZE", "1000"),
             auto_save=auto_save_value == "true",
